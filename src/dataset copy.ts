@@ -1,55 +1,47 @@
 // import { Candle } from './binance';
 
-import { CONFIG } from "./config";
-
 export function prepareDataset(candles: number[][], windowSize: number): DataSample[] {
     const dataset: DataSample[] = [];
-  
+    const GROWTH_THRESHOLD = 1.01; // Порог роста (5%)
+
     // Применяем нормализацию
-    // const normalizedCandles = normalizeData(candles);
-    const noNormalizedCandles = candles;
-    const allNormCandles = normalizeData(candles);
+    const normalizedCandles = normalizeData(candles);
 
-
-    for (let i = 0; i < noNormalizedCandles.length - windowSize; i++) {
+    for (let i = 0; i < normalizedCandles.length - windowSize; i++) {
         // Проверяем выход за пределы массива
-        if (i + windowSize + 1 >= noNormalizedCandles.length) {
+        if (i + windowSize + 1 >= normalizedCandles.length) {
             break;
         }
 
         try {
-            const usedNormalizedCandles = normalizeData(noNormalizedCandles.slice(i, i + windowSize + CONFIG.FORWARD_COUNT_CHEK));
-
-            const input = usedNormalizedCandles.slice(0, windowSize).map(candle => [
+            const input = normalizedCandles.slice(i, i + windowSize).map(candle => [
                 candle[0], // open
                 candle[1], // high
                 candle[2], // low
                 candle[3], // close
-                candle[4], // volume
-                candle[5] // реальная цена без форматирования
+                candle[4], // volume   
+                candle[5] 
             ]);
 
-            const checkCandels = []
-            while (checkCandels.length < CONFIG.FORWARD_COUNT_CHEK) {
-                checkCandels.push(usedNormalizedCandles[windowSize + checkCandels.length])
-            }
-           
-            const max = Math.max(...checkCandels.map(c => c[5]));
+            const max = Math.max(
+                normalizedCandles[i + windowSize][5],
+                normalizedCandles[i + windowSize + 1][5],
+                normalizedCandles[i + windowSize + 2][5],
+                // normalizedCandles[i + windowSize + 3][3],
+            );
 
             // Условие роста
-            const res = max > input[input.length - 1][5] * CONFIG.GROWTH_THRESHOLD ? 1 : 0;
-            res && console.log('Max:', max, 'LastKnown:', input[input.length - 1][5])
             
-            input.forEach(inp => {
+            const res = max > input[input.length - 1][5] * GROWTH_THRESHOLD ? 1 : 0;
+            console.log('REal max', max, 'inp:', input[input.length - 1][5], res)
+            input.forEach(inp=>{
                 delete inp[5]
             })
-
-            dataset.push({ input, target: [res], maxClose: allNormCandles[i + windowSize - 1][3] });
+            dataset.push({ input, target: [res], maxClose: normalizedCandles[i + windowSize - 1][5] });
         } catch (error) {
             console.log('Error preparing dataset:', error?.toString());
         }
     }
-    console.log('IsOk:', dataset.filter(d => d.target[0] === 1).length, 'NotOk:', dataset.filter(d => d.target[0] === 0).length)
 
     return dataset;
 }
@@ -100,9 +92,10 @@ export function normalizeData(candles: number[][]) {
     const minVolume = Math.min(...values)
 
     return allPrices.map((prices, i) => {
-        return [...prices.map(price => (price - min) / (max - min)), (values[i] - minVolume) / (maxVolume - minVolume), +prices[3]]  // нормализация в диапазоне [0, 1]
+        return [...prices.map(price => (price - min) / (max - min)), (values[i] - minVolume) / (maxVolume - minVolume), prices[3]]  // нормализация в диапазоне [0, 1]
     });
 }
+
 
 export const normalizeArray = (array: number[]) => {
     const min = Math.min(...array);

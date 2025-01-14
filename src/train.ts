@@ -8,7 +8,7 @@ export async function trainModel() {
     // Шаг 1: Загрузка и подготовка данных
     const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, CONFIG.CANDLE_LIMIT);
     const dataset = prepareDataset(candles, CONFIG.INPUT_SIZE);
-    const { trainData, testData } = splitDataset(dataset, 0.95);
+    const { trainData, testData } = splitDataset(dataset, 0.98);
     // const trainData = dataset
     // const testData = dataset
 
@@ -35,12 +35,12 @@ export async function trainModel() {
     model.add(tf.layers.dropout({ rate: 0.2 }));
     model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
 
-    // model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
     // model.add(tf.layers.dense({ units: 256, activation: 'relu' }));
     // model.add(tf.layers.dense({ units: 1256, activation: 'relu' }));
     model.add(tf.layers.dropout({ rate: 0.2 }));
-    model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
-    model.add(tf.layers.dropout({ rate: 0.2 }));
+    // model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
+    // model.add(tf.layers.dropout({ rate: 0.2 }));
     model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' })); // Активация для вероятностей
 
     // Шаг 4: Компиляция модели
@@ -72,7 +72,7 @@ export async function trainModel() {
         const predictedTrainDataArray = predictedTDataArray.map((data) => data[0]);
         const closeTrainLabels = trainLabels.map(label => label[0]); // Берем только close
 
-        const countShow = 250
+        const countShow = 500
         visualizeResults(closeTrainLabels.slice(0, countShow), predictedTrainDataArray.slice(0, countShow), normalizeArray(trainMaxClose.slice(0, countShow)), 'chart-known');
 
         const res = await model.evaluate(testInputsTensor, testLabelsTensor) as tf.Scalar[];
