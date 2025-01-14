@@ -2,19 +2,23 @@
 
 export function prepareDataset(candles: number[][], windowSize: number): DataSample[] {
     const dataset: DataSample[] = [];
-    const GROWTH_THRESHOLD = 1.1; // Порог роста (5%)
-
+    const GROWTH_THRESHOLD = 1.5; // Порог роста (10%)
+    const COUNT_CHEK = 3;
     // Применяем нормализацию
-    const normalizedCandles = normalizeData(candles);
+    // const normalizedCandles = normalizeData(candles);
+    const noNormalizedCandles = candles;
+    const allNormCandles = normalizeData(candles);
 
-    for (let i = 0; i < normalizedCandles.length - windowSize; i++) {
+    for (let i = 0; i < noNormalizedCandles.length - windowSize; i++) {
         // Проверяем выход за пределы массива
-        if (i + windowSize + 1 >= normalizedCandles.length) {
+        if (i + windowSize + 1 >= noNormalizedCandles.length) {
             break;
         }
 
         try {
-            const input = normalizedCandles.slice(i, i + windowSize).map(candle => [
+            const usedNormalizedCandles = normalizeData(noNormalizedCandles.slice(i, i + windowSize + COUNT_CHEK));
+
+            const input = usedNormalizedCandles.slice(0, windowSize).map(candle => [
                 candle[0], // open
                 candle[1], // high
                 candle[2], // low
@@ -22,17 +26,20 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
                 candle[4], // volume    
             ]);
 
-            const max = Math.max(
-                normalizedCandles[i + windowSize][3],
-                normalizedCandles[i + windowSize + 1][3],
-                // normalizedCandles[i + windowSize + 2][3],
-                // normalizedCandles[i + windowSize + 3][3],
-            );
+            const checkCandels = []
+            while (checkCandels.length < COUNT_CHEK) {
+                checkCandels.push(usedNormalizedCandles[windowSize + checkCandels.length])
+            }
+            // console.log('USED', usedNormalizedCandles)
+            // console.log('INPUT', input)
+            // console.log('checkCandels', checkCandels)
+
+            const max = Math.max(...checkCandels.map(c => c[3]));
 
             // Условие роста
             const res = max > input[input.length - 1][3] * GROWTH_THRESHOLD ? 1 : 0;
 
-            dataset.push({ input, target: [res], maxClose: normalizedCandles[i + windowSize - 1][3] });
+            dataset.push({ input, target: [res], maxClose: allNormCandles[i + windowSize - 1][3] });
         } catch (error) {
             console.log('Error preparing dataset:', error?.toString());
         }
@@ -79,8 +86,8 @@ export function normalizeData(candles: number[][]) {
     ]);
 
     const flattenPrices = allPrices.flat();
-    const min = Math.min(...flattenPrices) / 1.1;
-    const max = Math.max(...flattenPrices) * 0.9;
+    const min = Math.min(...flattenPrices)
+    const max = Math.max(...flattenPrices)
 
     const values = candles.map(c => c[5])
     const maxVolume = Math.max(...values)
@@ -89,4 +96,11 @@ export function normalizeData(candles: number[][]) {
     return allPrices.map((prices, i) => {
         return [...prices.map(price => (price - min) / (max - min)), (values[i] - minVolume) / (maxVolume - minVolume)]  // нормализация в диапазоне [0, 1]
     });
+}
+
+export const normalizeArray = (array: number[]) => {
+    const min = Math.min(...array);
+    const max = Math.max(...array);
+
+    return array.map(x => (x - min) / (max - min));
 }
