@@ -1,0 +1,28 @@
+{
+  "name": "tradehelper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/lodash": "^4.17.14",
+    "@types/node": "^22.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "axios": "^1.7.9",
+    "chart.js": "^4.4.7",
+    "lodash": "^4.17.21",
+    "plotly.js": "^2.35.3",
+    "plotly.js-dist": "^2.35.3"
+  }
+}
