@@ -35,7 +35,7 @@ export async function trainModel() {
     model.add(tf.layers.dropout({ rate: 0.2 }));
     model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
 
-    model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
+    // model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
     // model.add(tf.layers.dense({ units: 256, activation: 'relu' }));
     // model.add(tf.layers.dense({ units: 1256, activation: 'relu' }));
     model.add(tf.layers.dropout({ rate: 0.2 }));
