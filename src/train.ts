@@ -5,6 +5,7 @@ import { getCurrentLastInputs, normalizeArray, prepareDataset, splitDataset } fr
 import { visualizeError, visualizeResults } from './visualizeResults';
 import { setDate } from './statistic';
 
+
 export async function trainModel() {
     // Шаг 1: Загрузка и подготовка данных
 
@@ -122,41 +123,8 @@ export async function trainModel() {
         visualizeError(error, errorTest, 'chart-error')
         console.log('RENDER')
 
-        const currentInputs = await getCurrentLastInputs()
-        const prepInputs = currentInputs.map(i => i.map(v => v.slice(0, 5)).flat())
-        console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1][6]) + ' ' + i[i.length - 1][5]))
-
-        console.log('PrepInps:', prepInputs)
-        const [_pred2ClosedValue, _predClosedValue, _lastClosedValue, _noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[][]
-        // const [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[]
-        const pred2ClosedValue = _pred2ClosedValue[0]
-        const predClosedValue = _predClosedValue[0]
-        const lastClosedValue = _lastClosedValue[0]
-        const noClosedValue = _noClosedValue[0]
-
-
-        const closeForce = Math.round((lastClosedValue - pred2ClosedValue) * 100)
-        const noCloseForce = Math.round((noClosedValue - predClosedValue) * 100)
-
-        console.log('LifetimePredictions:', [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue])
-        console.log('CloseForce:', closeForce, 'NoCloseForce:', noCloseForce)
-
-        const lastCloseInput = currentInputs[currentInputs.length - 2]
-        const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
-        console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle[6]), lastCloseCandle[5])
-
-        if (closeForce > 50 || closeForce < -50) {
-            setDate({
-                closeTime: lastCloseCandle[6],
-                closePrice: lastCloseCandle[5],
-                force: closeForce
-            })
-        }
-
     }
     // чтобы в рантайме чекал цены для статистики
-    setInterval(render, 10_000)
-
     // Шаг 5: Обучение модели
     await model.fit(trainInputsTensor, trainLabelsTensor, {
         epochs: 500,
@@ -166,16 +134,49 @@ export async function trainModel() {
                 console.log(`Epoch: ${epoch + 1}, Loss: ${logs?.loss}, MSE: ${logs?.mse}`);
                 if (epoch % 5 === 0) {
                     error.push(logs?.loss || 0)
+                    render()
                 }
             },
         },
         validationData: [testInputsTensor, testLabelsTensor],
     });
 
-    // Шаг 6: Оценка на тестовых данных
+    setInterval(() => {
+        useRuntime(model)
+    }, 30_000)
+}
 
 
 
-    // Шаг 7: Визуализация результатов
+const useRuntime = async (model: tf.Sequential) => {
+    const currentInputs = await getCurrentLastInputs()
+    const prepInputs = currentInputs.map(i => i.map(v => v.slice(0, 5)).flat())
+    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1][6]) + ' ' + i[i.length - 1][5]))
 
+    // console.log('PrepInps:', prepInputs)
+    const [_pred2ClosedValue, _predClosedValue, _lastClosedValue, _noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[][]
+    // const [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[]
+    const pred2ClosedValue = _pred2ClosedValue[0]
+    const predClosedValue = _predClosedValue[0]
+    const lastClosedValue = _lastClosedValue[0]
+    const noClosedValue = _noClosedValue[0]
+
+
+    const closeForce = Math.round((lastClosedValue - pred2ClosedValue) * 100)
+    const noCloseForce = Math.round((noClosedValue - predClosedValue) * 100)
+
+    console.log('LifetimePredictions:', [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue])
+    console.log('CloseForce:', closeForce, 'NoCloseForce:', noCloseForce)
+
+    const lastCloseInput = currentInputs[currentInputs.length - 2]
+    const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
+    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle[6]), lastCloseCandle[5])
+
+    if (closeForce > 50 || closeForce < -50) {
+        setDate({
+            closeTime: lastCloseCandle[6],
+            closePrice: lastCloseCandle[5],
+            force: closeForce
+        })
+    }
 }
