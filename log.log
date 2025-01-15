@@ -1,0 +1,31 @@
+Start: 2025-01-10T17:30:00.000Z
+8|trader  | Stop: 2025-01-15T22:15:00.000Z
+8|trader  | CurrInps: [
+8|trader  |   'Thu Jan 16 2025 00:29:59 GMT+0300 (Moscow Standard Time) 99782.7',
+8|trader  |   'Thu Jan 16 2025 00:44:59 GMT+0300 (Moscow Standard Time) 99589.35',
+8|trader  |   'Thu Jan 16 2025 00:59:59 GMT+0300 (Moscow Standard Time) 99672',
+8|trader  |   'Thu Jan 16 2025 01:14:59 GMT+0300 (Moscow Standard Time) 99615.76',
+8|trader  |   'Thu Jan 16 2025 01:29:59 GMT+0300 (Moscow Standard Time) 99580.02'
+8|trader  | ]
+8|trader  | LifetimePredictions: [
+8|trader  |   0.26868051290512085,
+8|trader  |   0.3644397556781769,
+8|trader  |   0.8270792961120605,
+8|trader  |   0.6867309212684631
+8|trader  | ]
+8|trader  | CloseForce: 56 NoCloseForce: 32
+8|trader  | >>>>> CurrentClosePrice: 2025-01-15T22:14:59.999Z 99615.76
+8|trader  | Added stat: {
+8|trader  |   closeTime: 1736979299999,
+8|trader  |   currentTime: 1736980155229,
+8|trader  |   priceFromBinance: '99580.03000000',
+8|trader  |   closePrice: 99615.76,
+8|trader  |   force: 56
+8|trader  | }
+8|trader  | ******** Statistic ********
+8|trader  |             Closetime Thu Jan 16 2025 01:14:59 GMT+0300 (Moscow Standard Time),
+8|trader  |             SignalTime Thu Jan 16 2025 01:29:15 GMT+0300 (Moscow Standard Time),
+8|trader  |             signalPrice 99580.03000000
+8|trader  |             closePrice 99615.76
+8|trader  |             force 56
+8|trader  |             
