@@ -1,6 +1,8 @@
 // import { Candle } from './binance';
 
+import _ from "lodash";
 import { CONFIG } from "./config";
+import { getHistoricalCandles } from "./binance";
 
 export function prepareDataset(candles: number[][], windowSize: number): DataSample[] {
     const dataset: DataSample[] = [];
@@ -10,6 +12,11 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
     const noNormalizedCandles = candles;
     const allNormCandles = normalizeData(candles);
 
+    const lastFinally = allNormCandles[allNormCandles.length - 2]
+    const predLastFinally = allNormCandles[allNormCandles.length - 3]
+
+    console.log('PredLast:', predLastFinally, new Date(predLastFinally[6]))
+    console.log('Last:', lastFinally, new Date(lastFinally[6]))
 
     for (let i = 0; i < noNormalizedCandles.length - windowSize; i++) {
         // Проверяем выход за пределы массива
@@ -127,4 +134,23 @@ export const normalizeArray = (array: number[]) => {
     const max = Math.max(...array);
 
     return array.map(x => (x - min) / (max - min));
+}
+
+
+export const getCurrentLastInputs = async () => {
+    const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, 500);
+    // const candles: number[][] = []
+
+    // console.log('All:', candles)
+    const inputs: number[][][] = []
+    let i = 0
+    while (i < 5) {
+        const input = candles.slice(candles.length - CONFIG.INPUT_SIZE - i, candles.length - i)
+        // console.log('C', i, input)
+        inputs.push(normalizeData(input))
+        i++
+    }
+
+    return inputs.reverse() // возвращаем нормализованные inputs
+
 }

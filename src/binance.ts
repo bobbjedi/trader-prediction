@@ -46,7 +46,7 @@ export async function getHistoricalCandles(symbol: string, interval: string, tot
             break;
         }
     }
-    candles
+    
     // candles.forEach((c, i) => {
     //     try {
     //         console.log('Change:', Math.round((c[0] - candles[i + 1][0]) / 1000 / 60), 'min')
