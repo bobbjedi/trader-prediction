@@ -11,9 +11,9 @@ export async function trainModel() {
     const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, CONFIG.CANDLE_LIMIT);
     const dataset = prepareDataset(candles, CONFIG.INPUT_SIZE);
     // const { trainData, testData } = splitDataset(dataset, 0.98);
-    const trainData = dataset.splice(0, dataset.length - countShow)
-    const testData = dataset
-console.log(testData[0])
+    const trainData = dataset
+    const testData = dataset.splice(-countShow)
+    console.log('Set item:', testData[0])
     // Шаг 2: Разделяем данные на вход (inputs) и метки (targets)
     const trainInputs = trainData.map(sample => sample.input.flat());
     const trainLabels = trainData.map(sample => sample.target);
@@ -34,7 +34,7 @@ console.log(testData[0])
     // Шаг 3: Создание модели
     const model = tf.sequential();
     model.add(tf.layers.dense({ units: 32, activation: 'relu', inputShape: [CONFIG.INPUT_SIZE * 5] }));
-    
+
     model.add(tf.layers.dropout({ rate: 0.2 }));
 
     model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
@@ -63,12 +63,6 @@ console.log(testData[0])
     const error: number[] = []
     const errorTest: number[] = []
     const render = async () => {
-        const predictedTestData = model.predict(testInputsTensor) as tf.Tensor;
-        const predictedDataArray = await predictedTestData.array() as number[][];
-        const predictedTestDataArray = predictedDataArray.map((data) => data[0]);
-        const closeTestLabels = testLabels.map(label => label[0]); // Берем только close
-
-        visualizeResults(closeTestLabels, predictedTestDataArray, normalizeArray(testMaxClose), 'chart-unknown');
 
 
         const predictedTrainData = model.predict(trainInputsTensor) as tf.Tensor;
@@ -76,12 +70,53 @@ console.log(testData[0])
         const predictedTrainDataArray = predictedTDataArray.map((data) => data[0]);
         const closeTrainLabels = trainLabels.map(label => label[0]); // Берем только close
 
-        visualizeResults(closeTrainLabels.slice(0, countShow), predictedTrainDataArray.slice(0, countShow), normalizeArray(trainMaxClose.slice(0, countShow)), 'chart-known');
+        const maxPriceTrain = Math.max(...trainData.slice(0, countShow).map(d => d.realPrice || 0))
+
+        console.log('Last train open:', new Date(trainData[0].closeTime))
+
+        visualizeResults(
+            closeTrainLabels.slice(0, countShow).map(v => v * maxPriceTrain),
+            predictedTrainDataArray.slice(0, countShow).map(v => v * maxPriceTrain),
+            trainMaxClose.slice(0, countShow).map(v => v * maxPriceTrain),
+            'chart-known');
 
         const res = await model.evaluate(testInputsTensor, testLabelsTensor) as tf.Scalar[];
         console.log(`Test Loss: ${res?.[0]}`, 'NM:', res?.[0].dataSync()?.[0]);
         console.log(`Test MSE: ${res?.[1]}`);
+
         errorTest.push(Number(res?.[0].dataSync()?.[0]) || 0)
+
+
+        const predictedTestData = model.predict(testInputsTensor) as tf.Tensor;
+        const predictedDataArray = await predictedTestData.array() as number[][];
+        const predictedTestDataArray = predictedDataArray.map((data) => data[0]);
+        const closeTestLabels = testLabels.map(label => label[0]); // Берем только close
+
+        const maxPriceTest = Math.max(...testData.map(d => d.realPrice || 0))
+        const minPriceTest = Math.min(...testData.map(d => d.realPrice || 0))
+
+        console.log('Last test open:', new Date(testData[testData.length - 1]?.closeTime))
+        visualizeResults(closeTestLabels.map(v => v * maxPriceTest), predictedTestDataArray.map(v => v * maxPriceTest), testData.map(d => d.realPrice || 0), 'chart-unknown');
+
+
+        predictedTestDataArray.forEach((v, i) => {
+            const predicted = v
+            const last = Math.min(predictedTestDataArray[i - 1] || 1, predictedTestDataArray[i - 2] || 1,)
+            const { realPrice, closeTime } = testData[i]
+            const force = Math.round((predicted - last) * 100)
+            if (force > 50) {
+                const bestNext = Math.max(
+                    testData[i + 1]?.realPrice || 0,
+                    testData[i + 2]?.realPrice || 0,
+                    testData[i + 3]?.realPrice || 0,
+                    testData[i + 4]?.realPrice || 0,
+                    testData[i + 5]?.realPrice || 0,
+                )
+                console.log(`
+                    FORCE ${force} ${new Date(closeTime)} 
+                    Price: ${realPrice} -> ${bestNext} change: ${(((bestNext - realPrice) / realPrice) * 100).toFixed(2)}%`)
+            }
+        })
 
 
         visualizeError(error, errorTest, 'chart-error')

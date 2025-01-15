@@ -41,7 +41,7 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
                 ? 1
                 : 0;
 
-            res && console.log('Max:', max, 'LastKnown:', input[input.length - 1][5])
+            // res && console.log('Max:', max, 'LastKnown:', input[input.length - 1][5])
 
             input.forEach(inp => {
                 inp.length = 5
@@ -51,7 +51,8 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
                 input,
                 target: [res],
                 maxClose: allNormCandles[i + windowSize - 1][3],
-                realPrice: noNormalizedCandles[i + windowSize - 1][0]
+                realPrice: noNormalizedCandles[i + windowSize - 1][4],
+                closeTime: noNormalizedCandles[i + windowSize - 1][6]
             });
         } catch (error) {
             console.log('Error preparing dataset:', error?.toString());
@@ -109,8 +110,15 @@ export function normalizeData(candles: number[][]) {
     const maxVolume = Math.max(...values)
     const minVolume = Math.min(...values)
 
+    const closeTimes = candles.map(c => c[6])
+
     return allPrices.map((prices, i) => {
-        return [...prices.map(price => (price - min) / (max - min)), (values[i] - minVolume) / (maxVolume - minVolume), +prices[3]]  // нормализация в диапазоне [0, 1]
+        return [
+            ...prices.map(price => (price - min) / (max - min)),
+            (values[i] - minVolume) / (maxVolume - minVolume),
+            +candles[i][4], // закрытие без форматирования
+            closeTimes[i] // время закрытия свечи
+        ]  // нормализация в диапазоне [0, 1]
     });
 }
 

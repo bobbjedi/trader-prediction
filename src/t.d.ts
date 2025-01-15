@@ -1,5 +1,5 @@
 type Candle = {
-    openTime: number;
+    closeTime: number;
     open: number;
     high: number;
     low: number;
@@ -11,7 +11,8 @@ type Candle = {
   type DataSample = {
     input: number[][]; // Входные свечи (N свечей)
     target: number[];  // Целевая свеча (OHLC или только close)
-    maxClose?: number;
-    realPrice?: number;
+    maxClose: number;
+    realPrice: number;
+    closeTime: number
   };
   

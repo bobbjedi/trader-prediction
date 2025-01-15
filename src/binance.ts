@@ -13,7 +13,7 @@ async function fetchCandles(symbol: string, interval: string, limit: number, end
         params.endTime = endTime; // Для всех запросов после первого используем endTime
     }
 
-    const response = await axios.get(API_URL, { params }) ;
+    const response = await axios.get(API_URL, { params });
     return response.data as number[][];
 }
 
@@ -27,13 +27,13 @@ export async function getHistoricalCandles(symbol: string, interval: string, tot
         console.log(`Fetching candles up to: ${endTime ? new Date(endTime).toISOString() : 'No endTime'}`);
 
         const candlesBatch = await fetchCandles(symbol, interval, 500, endTime);
-        console.log('FRST', candlesBatch[0], 'last', candlesBatch[candlesBatch.length - 1])
         if (candlesBatch.length === 0) {
             console.log('No candles returned, exiting...');
             break; // Если нет данных, выходим
         }
-
-        candles = candles.concat(candlesBatch);
+        console.log('Start:', new Date(candlesBatch[0][0]))
+        console.log('Stop:', new Date(candlesBatch[candlesBatch.length - 1][0]))
+        candles.unshift(...candlesBatch);
         remainingCandles -= candlesBatch.length;
 
         // Обновляем endTime, используя timestamp последней свечи
@@ -46,6 +46,13 @@ export async function getHistoricalCandles(symbol: string, interval: string, tot
             break;
         }
     }
+    candles
+    // candles.forEach((c, i) => {
+    //     try {
+    //         console.log('Change:', Math.round((c[0] - candles[i + 1][0]) / 1000 / 60), 'min')
+    //     } catch (error) {
 
-    return candles;
+    //     }
+    // })
+    return candles
 }
