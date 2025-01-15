@@ -4,7 +4,7 @@ import { CONFIG } from "./config";
 
 export function prepareDataset(candles: number[][], windowSize: number): DataSample[] {
     const dataset: DataSample[] = [];
-  
+
     // Применяем нормализацию
     // const normalizedCandles = normalizeData(candles);
     const noNormalizedCandles = candles;
@@ -19,7 +19,7 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
 
         try {
             const usedNormalizedCandles = normalizeData(noNormalizedCandles.slice(i, i + windowSize + CONFIG.FORWARD_COUNT_CHEK));
-
+            // console.log('usedNormalizedCandles', usedNormalizedCandles)
             const input = usedNormalizedCandles.slice(0, windowSize).map(candle => [
                 candle[0], // open
                 candle[1], // high
@@ -33,24 +33,34 @@ export function prepareDataset(candles: number[][], windowSize: number): DataSam
             while (checkCandels.length < CONFIG.FORWARD_COUNT_CHEK) {
                 checkCandels.push(usedNormalizedCandles[windowSize + checkCandels.length])
             }
-           
-            const max = Math.max(...checkCandels.map(c => c[5]));
 
+            const max = Math.max(...checkCandels.map(c => c[5]));
+            const targetPrice = input[input.length - 1][5] * CONFIG.GROWTH_THRESHOLD
             // Условие роста
-            const res = max > input[input.length - 1][5] * CONFIG.GROWTH_THRESHOLD ? 1 : 0;
+            const res = max >= targetPrice
+                ? 1
+                : 0;
+
             res && console.log('Max:', max, 'LastKnown:', input[input.length - 1][5])
-            
+
             input.forEach(inp => {
-                delete inp[5]
+                inp.length = 5
             })
 
-            dataset.push({ input, target: [res], maxClose: allNormCandles[i + windowSize - 1][3] });
+            dataset.push({
+                input,
+                target: [res],
+                maxClose: allNormCandles[i + windowSize - 1][3],
+                realPrice: noNormalizedCandles[i + windowSize - 1][0]
+            });
         } catch (error) {
             console.log('Error preparing dataset:', error?.toString());
         }
     }
     console.log('IsOk:', dataset.filter(d => d.target[0] === 1).length, 'NotOk:', dataset.filter(d => d.target[0] === 0).length)
-
+    // dataset.forEach(d => {
+    //     console.log('I:', d.input, 'T:', d.target, 'M:', d.maxClose)
+    // })
     return dataset;
 }
 
@@ -91,9 +101,9 @@ export function normalizeData(candles: number[][]) {
         candle[4]  // close
     ]);
 
-    const flattenPrices = allPrices.flat();
-    const min = Math.min(...flattenPrices) / 1.1;
-    const max = Math.max(...flattenPrices) * 0.9;
+    const flattenPrices = allPrices.flat()
+    const min = Math.min(...flattenPrices)
+    const max = Math.max(...flattenPrices)
 
     const values = candles.map(c => c[5])
     const maxVolume = Math.max(...values)

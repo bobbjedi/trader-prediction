@@ -6,12 +6,14 @@ import { visualizeError, visualizeResults } from './visualizeResults';
 
 export async function trainModel() {
     // Шаг 1: Загрузка и подготовка данных
+
+    const countShow = 300
     const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, CONFIG.CANDLE_LIMIT);
     const dataset = prepareDataset(candles, CONFIG.INPUT_SIZE);
-    const { trainData, testData } = splitDataset(dataset, 0.98);
-    // const trainData = dataset
-    // const testData = dataset
-
+    // const { trainData, testData } = splitDataset(dataset, 0.98);
+    const trainData = dataset.splice(0, dataset.length - countShow)
+    const testData = dataset
+console.log(testData[0])
     // Шаг 2: Разделяем данные на вход (inputs) и метки (targets)
     const trainInputs = trainData.map(sample => sample.input.flat());
     const trainLabels = trainData.map(sample => sample.target);
@@ -31,8 +33,10 @@ export async function trainModel() {
 
     // Шаг 3: Создание модели
     const model = tf.sequential();
-    model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [CONFIG.INPUT_SIZE * 5] }));
+    model.add(tf.layers.dense({ units: 32, activation: 'relu', inputShape: [CONFIG.INPUT_SIZE * 5] }));
+    
     model.add(tf.layers.dropout({ rate: 0.2 }));
+
     model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
 
     // model.add(tf.layers.dense({ units: 64, activation: 'relu' }));
@@ -72,7 +76,6 @@ export async function trainModel() {
         const predictedTrainDataArray = predictedTDataArray.map((data) => data[0]);
         const closeTrainLabels = trainLabels.map(label => label[0]); // Берем только close
 
-        const countShow = 500
         visualizeResults(closeTrainLabels.slice(0, countShow), predictedTrainDataArray.slice(0, countShow), normalizeArray(trainMaxClose.slice(0, countShow)), 'chart-known');
 
         const res = await model.evaluate(testInputsTensor, testLabelsTensor) as tf.Scalar[];

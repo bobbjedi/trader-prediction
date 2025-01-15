@@ -12,5 +12,6 @@ type Candle = {
     input: number[][]; // Входные свечи (N свечей)
     target: number[];  // Целевая свеча (OHLC или только close)
     maxClose?: number;
+    realPrice?: number;
   };
   
