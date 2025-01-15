@@ -56,3 +56,9 @@ export async function getHistoricalCandles(symbol: string, interval: string, tot
     // })
     return candles
 }
+
+
+export const getPrice = async (symbol: string) => {
+    const response = await axios.get(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+    return response.data.price
+}

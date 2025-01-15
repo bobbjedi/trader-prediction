@@ -3,6 +3,7 @@ import { getHistoricalCandles } from './binance';
 import { CONFIG } from './config';
 import { getCurrentLastInputs, normalizeArray, prepareDataset, splitDataset } from './dataset';
 import { visualizeError, visualizeResults } from './visualizeResults';
+import { setDate } from './statistic';
 
 export async function trainModel() {
     // Шаг 1: Загрузка и подготовка данных
@@ -60,11 +61,10 @@ export async function trainModel() {
     });
 
 
+
     const error: number[] = []
     const errorTest: number[] = []
     const render = async () => {
-
-
         const predictedTrainData = model.predict(trainInputsTensor) as tf.Tensor;
         const predictedTDataArray = await predictedTrainData.array() as number[][];
         const predictedTrainDataArray = predictedTDataArray.map((data) => data[0]);
@@ -134,29 +134,39 @@ export async function trainModel() {
         const lastClosedValue = _lastClosedValue[0]
         const noClosedValue = _noClosedValue[0]
 
+
+        const closeForce = Math.round((lastClosedValue - pred2ClosedValue) * 100)
+        const noCloseForce = Math.round((noClosedValue - predClosedValue) * 100)
+
         console.log('LifetimePredictions:', [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue])
-        console.log('CloseForce:', Math.round((lastClosedValue - pred2ClosedValue) * 100))
-        console.log('NoCloseForce:', Math.round((noClosedValue - predClosedValue) * 100))
+        console.log('CloseForce:', closeForce, 'NoCloseForce:', noCloseForce)
 
         const lastCloseInput = currentInputs[currentInputs.length - 2]
         const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
         console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle[6]), lastCloseCandle[5])
+
+        if (closeForce > 50 || closeForce < -50) {
+            setDate({
+                closeTime: lastCloseCandle[6],
+                closePrice: lastCloseCandle[5],
+                force: closeForce
+            })
+        }
+
     }
-
-
+    // чтобы в рантайме чекал цены для статистики
+    setInterval(render, 10_000)
 
     // Шаг 5: Обучение модели
     await model.fit(trainInputsTensor, trainLabelsTensor, {
-        epochs: 200000,
+        epochs: 500,
         batchSize: 32,
         callbacks: {
             onEpochEnd: (epoch, logs) => {
                 console.log(`Epoch: ${epoch + 1}, Loss: ${logs?.loss}, MSE: ${logs?.mse}`);
                 if (epoch % 5 === 0) {
                     error.push(logs?.loss || 0)
-                    render()
                 }
-
             },
         },
         validationData: [testInputsTensor, testLabelsTensor],
