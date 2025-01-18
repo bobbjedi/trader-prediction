@@ -1,6 +1,5 @@
 // import { Candle } from './binance';
 
-import _ from "lodash";
 import { CONFIG } from "./config";
 import { getHistoricalCandles } from "./binance";
 
@@ -137,7 +136,7 @@ export const normalizeArray = (array: number[]) => {
 }
 
 
-export const getCurrentLastInputs = async (candles?: number[][]) => {
+export const candelsToInputs = async (candles?: number[][]) => {
     candles ||= await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, 500);
     // const candles: number[][] = []
 
@@ -146,13 +145,13 @@ export const getCurrentLastInputs = async (candles?: number[][]) => {
     let i = 0
     while (i < candles.length - CONFIG.INPUT_SIZE - 1) {
         const input = candles.slice(candles.length - CONFIG.INPUT_SIZE - i, candles.length - i)
-        // console.log('C', i, input)
+        // console.log('C', i, new Date(input[0][6]))
         inputs.push(normalizeData(input))
         i++
     }
 
-    return inputs.reverse().map(inp=>{
-        return inp.map(c=>{
+    return inputs.reverse().map(inp => {
+        return inp.map(c => {
             return {
                 open: c[0],
                 high: c[1],
@@ -166,3 +165,94 @@ export const getCurrentLastInputs = async (candles?: number[][]) => {
     }) // возвращаем нормализованные inputs
 
 }
+
+export const prepareInputs = async (candles: number[][]) => {
+    const currentInputs = await candelsToInputs(candles)
+
+
+    const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]).flat())
+
+    // currentInputs.forEach(inp => {
+    //     console.log('Interval', inp.map(i => new Date(i.closeTime)))
+    // })
+
+
+    const set: {
+        input: number[][]
+        target: number[]
+        maxClose: number
+        currentPrice: number
+    }[] = []
+
+    prepInputs.forEach((input, i) => {
+        if (i < 2 || !prepInputs[i + CONFIG.INPUT_SIZE + 5]) {
+            return
+        }
+
+        const inputData = currentInputs[i]
+        const nextInputs = currentInputs.slice(i + CONFIG.INPUT_SIZE, i + CONFIG.FORWARD_COUNT_CHEK + CONFIG.INPUT_SIZE)
+        const nextPrices = nextInputs.map(i => i[0].realPrice || 0)
+        const maxPrice = Math.max(...nextPrices)
+        const currentPrice = inputData[inputData.length - 1].realPrice
+
+      
+
+
+
+        // const res = maxPrice >= currentPrice * CONFIG.GROWTH_THRESHOLD
+        //     ? 1
+        //     : 0;
+
+
+            const gotProfit = currentPrice * CONFIG.GROWTH_THRESHOLD
+            const gotProfitHalf = currentPrice * (1 + (CONFIG.GROWTH_THRESHOLD - 1) / 2)
+    
+            let res = 0
+    
+            if (maxPrice >= gotProfit) {
+                res = 1
+            } else if (maxPrice>= gotProfitHalf) {
+                res = 0.5
+            } else if(maxPrice > gotProfitHalf && maxPrice > currentPrice) {
+                res = 0.25
+            } else {
+                res = 0
+            }
+    
+
+
+        set.push({
+            input: splitArray(input, 5),
+            target: [res],
+            maxClose: maxPrice,
+            currentPrice
+        })
+
+        // console.log('**********')
+       
+        // console.log('InpData', inputData)
+        // console.log('InpDataTime', inputData.map(inp => new Date(inp.closeTime)))
+        // console.log('currentPrice', currentPrice)
+        // console.log('nextInputs', nextInputs)
+        // console.log('Checked next prices', nextPrices)
+       
+        // console.log('nextInputsStarts:', nextInputs.map(inp => new Date(inp[0].closeTime)))
+        // console.log('input', input)
+
+
+        // console.log('Next list->', nextInputs.map(inp => new Date(inp[inp.length - 1][6])))
+    })
+
+    return {
+        set, // сет для тренировки
+        allPrepInputs: prepInputs // полные инпуты до последней свечи
+    }
+}
+
+const splitArray = (arr: number[], chunkSize: number) => {
+    const result = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+      result.push(arr.slice(i, i + chunkSize));
+    }
+    return result;
+  };
