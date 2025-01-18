@@ -6,6 +6,23 @@ import { visualizeError, visualizeResults } from './visualizeResults';
 import { setDate } from './statistic';
 
 
+tf.setBackend('webgl');
+
+console.log('Available backends:', tf.engine().backendNames());
+
+// Проверяем текущий бэкенд
+console.log('Current backend:', tf.getBackend());
+
+// Проверяем версию WebGL
+console.log('WebGL version:', tf.ENV.get('WEBGL_VERSION'));
+
+// Принудительно устанавливаем CPU бэкенд, если WebGL недоступен
+if (tf.getBackend() !== 'webgl') {
+  console.warn('WebGL недоступен. Переключаемся на CPU.');
+  tf.setBackend('cpu');
+}
+
+
 export async function trainModel() {
     // Шаг 1: Загрузка и подготовка данных
 
@@ -194,7 +211,7 @@ export async function trainModel() {
             const last = Math.min(predictedTestDataArray[i - 1] || 1, predictedTestDataArray[i - 2] || 1,)
             const { currentPrice } = testData[i]
             const force = Math.round((predicted - last) * 100)
-            if (force > 50) {
+            if (force > 70) {
                 const bestNext = Math.max(
                     testData[i + 1]?.currentPrice || 0,
                     testData[i + 2]?.currentPrice || 0,
@@ -208,6 +225,8 @@ export async function trainModel() {
 
 
         visualizeError(error, errorTest, 'chart-error')
+
+        useTest(model, testRanTimeCandels)
         // console.log('RENDER')
 
     }
@@ -228,9 +247,9 @@ export async function trainModel() {
         validationData: [testInputsTensor, testLabelsTensor],
     });
 
-    setInterval(() => {
-        useTest(model, testRanTimeCandels)
-    }, 10_000)
+    // setInterval(() => {
+    //     useTest(model, testRanTimeCandels)
+    // }, 10_000)
 
 }
 
