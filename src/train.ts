@@ -47,7 +47,7 @@ export async function trainModel() {
         filters: 32,
         kernelSize: 3,
         activation: 'relu',
-        inputShape: [10, 5],
+        inputShape: [CONFIG.INPUT_SIZE, 5],
     }));
 
     // MaxPooling слой
