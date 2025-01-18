@@ -137,20 +137,32 @@ export const normalizeArray = (array: number[]) => {
 }
 
 
-export const getCurrentLastInputs = async () => {
-    const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, 500);
+export const getCurrentLastInputs = async (candles?: number[][]) => {
+    candles ||= await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, 500);
     // const candles: number[][] = []
 
     // console.log('All:', candles)
     const inputs: number[][][] = []
     let i = 0
-    while (i < 5) {
+    while (i < candles.length - CONFIG.INPUT_SIZE - 1) {
         const input = candles.slice(candles.length - CONFIG.INPUT_SIZE - i, candles.length - i)
         // console.log('C', i, input)
         inputs.push(normalizeData(input))
         i++
     }
 
-    return inputs.reverse() // возвращаем нормализованные inputs
+    return inputs.reverse().map(inp=>{
+        return inp.map(c=>{
+            return {
+                open: c[0],
+                high: c[1],
+                low: c[2],
+                close: c[3],
+                volume: c[4],
+                realPrice: c[5],
+                closeTime: c[6]
+            }
+        })
+    }) // возвращаем нормализованные inputs
 
 }

@@ -11,6 +11,7 @@ export async function trainModel() {
 
     const countShow = 300
     const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, CONFIG.CANDLE_LIMIT);
+    const testRanTimeCandels = candles.splice(-candles.length * .25)
     const dataset = prepareDataset(candles, CONFIG.INPUT_SIZE);
     // const { trainData, testData } = splitDataset(dataset, 0.98);
     const trainData = dataset
@@ -126,7 +127,7 @@ export async function trainModel() {
     }
     // чтобы в рантайме чекал цены для статистики
     // Шаг 5: Обучение модели
-    await model.fit(trainInputsTensor, trainLabelsTensor, {
+    model.fit(trainInputsTensor, trainLabelsTensor, {
         epochs: 500,
         batchSize: 32,
         callbacks: {
@@ -142,16 +143,48 @@ export async function trainModel() {
     });
 
     setInterval(() => {
-        useRuntime(model)
-    }, 30_000)
+        useTest(model, testRanTimeCandels)
+    }, 10_000)
+
 }
 
 
 
+const useTest = async (model: tf.Sequential, candles: number[][]) => {
+    const currentInputs = await getCurrentLastInputs(candles)
+    const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]).flat())
+    // console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1][6]) + ' ' + i[i.length - 1][5]))
+
+    // console.log('PrepInps:', prepInputs)
+    const predicts = (await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[][]).map(p => p[0])
+    // console.log('Predictions:', predicts)
+
+    predicts.forEach((p, i) => {
+        if (i < 2 || !prepInputs[i + 5]) {
+            return
+        }
+
+        const force = Math.round((p - predicts[i - 2]) * 100)
+        // console.log('Force', force , p, predicts[i - 2])
+        const input = currentInputs[i]
+        if (force < 60) {
+            return
+        }
+
+        const nextInputs = currentInputs.slice(i + 1, i + 5)
+        const maxPrice = Math.max(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
+        const currentPrice = input[input.length - 1].realPrice
+        console.log('Force:', force, 'Price', currentPrice, '->', maxPrice, 'change:', ((maxPrice - currentPrice) / currentPrice * 100).toFixed(2))
+
+        // console.log('Next list->', nextInputs.map(inp => new Date(inp[inp.length - 1][6])))
+    })
+   
+}
+
 const useRuntime = async (model: tf.Sequential) => {
     const currentInputs = await getCurrentLastInputs()
-    const prepInputs = currentInputs.map(i => i.map(v => v.slice(0, 5)).flat())
-    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1][6]) + ' ' + i[i.length - 1][5]))
+    const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]).flat())
+    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1].closeTime) + ' ' + i[i.length - 1].realPrice.toFixed(2)))
 
     // console.log('PrepInps:', prepInputs)
     const [_pred2ClosedValue, _predClosedValue, _lastClosedValue, _noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[][]
@@ -170,12 +203,12 @@ const useRuntime = async (model: tf.Sequential) => {
 
     const lastCloseInput = currentInputs[currentInputs.length - 2]
     const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
-    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle[6]), lastCloseCandle[5])
+    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle.closeTime), lastCloseCandle.realPrice)
 
     if (closeForce > 50 || closeForce < -50) {
         setDate({
-            closeTime: lastCloseCandle[6],
-            closePrice: lastCloseCandle[5],
+            closeTime: lastCloseCandle.closeTime,
+            closePrice: lastCloseCandle.realPrice,
             force: closeForce
         })
     }
