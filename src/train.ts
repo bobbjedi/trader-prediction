@@ -4,6 +4,7 @@ import { CONFIG } from './config';
 import { candelsToInputs, normalizeArray, prepareDataset, prepareInputs, splitDataset } from './dataset';
 import { visualizeError, visualizeResults } from './visualizeResults';
 import { setDate } from './statistic';
+import { useTest } from './useTest';
 
 
 tf.setBackend('webgl');
@@ -18,9 +19,11 @@ console.log('WebGL version:', tf.ENV.get('WEBGL_VERSION'));
 
 // Принудительно устанавливаем CPU бэкенд, если WebGL недоступен
 if (tf.getBackend() !== 'webgl') {
-  console.warn('WebGL недоступен. Переключаемся на CPU.');
-  tf.setBackend('cpu');
+    console.warn('WebGL недоступен. Переключаемся на CPU.');
+    tf.setBackend('cpu');
 }
+
+
 
 
 export async function trainModel() {
@@ -28,7 +31,7 @@ export async function trainModel() {
 
     const countShow = 300
     const candles = await getHistoricalCandles('BTCUSDT', CONFIG.TIMEFRAME, CONFIG.CANDLE_LIMIT);
-    const testRanTimeCandels = candles.splice(-candles.length * .25)
+    const testRanTimeCandels = candles.splice(-candles.length * .1)
 
     // console.log('prepareInputs:', prepareInputs(testRanTimeCandels))
 
@@ -56,10 +59,6 @@ export async function trainModel() {
     const model = tf.sequential();
 
 
-
-    // CNN + LSTM
-
-    // Сверточный слой
     model.add(tf.layers.conv1d({
         filters: 32,
         kernelSize: 3,
@@ -67,12 +66,13 @@ export async function trainModel() {
         inputShape: [CONFIG.INPUT_SIZE, 5],
     }));
 
-    // MaxPooling слой
+    // Attention слой
+    // model.add(new AttentionLayer());
+
+    // model.add(tf.layers.batchNormalization()); // BatchNormalization
     model.add(tf.layers.maxPooling1d({
         poolSize: 2,
     }));
-
-    // LSTM слой
     model.add(tf.layers.lstm({
         units: 64,
         returnSequences: false,
@@ -83,6 +83,7 @@ export async function trainModel() {
         units: 16,
         activation: 'relu',
     }));
+    // model.add(tf.layers.dropout({ rate: 0.5 })); // Dropout
 
     // Выходной слой
     model.add(tf.layers.dense({
@@ -92,13 +93,56 @@ export async function trainModel() {
 
     // Компиляция модели
     model.compile({
-        optimizer: tf.train.adam(0.001),
+        optimizer: tf.train.adam(0.0015), // Уменьшенный learning rate
         loss: 'binaryCrossentropy',
         metrics: ['accuracy'],
     });
 
 
-    // LSTM:
+
+
+    //  ***** CNN + LSTM
+
+    // Сверточный слой
+    // model.add(tf.layers.conv1d({
+    //     filters: 32,
+    //     kernelSize: 3,
+    //     activation: 'relu',
+    //     inputShape: [CONFIG.INPUT_SIZE, 5],
+    // }));
+
+    // // MaxPooling слой
+    // model.add(tf.layers.maxPooling1d({
+    //     poolSize: 2,
+    // }));
+
+    // // LSTM слой
+    // model.add(tf.layers.lstm({
+    //     units: 64,
+    //     returnSequences: false,
+    // }));
+
+    // // Полносвязный слой
+    // model.add(tf.layers.dense({
+    //     units: 16,
+    //     activation: 'relu',
+    // }));
+
+    // // Выходной слой
+    // model.add(tf.layers.dense({
+    //     units: 1,
+    //     activation: 'sigmoid',
+    // }));
+
+    // // Компиляция модели
+    // model.compile({
+    //     optimizer: tf.train.adam(0.001),
+    //     loss: 'binaryCrossentropy',
+    //     metrics: ['accuracy'],
+    // });
+
+
+    // ******* LSTM:
 
     // model.add(tf.layers.lstm({
     //     units: 64, // Количество нейронов
@@ -130,7 +174,7 @@ export async function trainModel() {
 
 
 
-
+    // ***** SIMPLE
 
     // model.add(tf.layers.dense({ units: 32, activation: 'relu', inputShape: [CONFIG.INPUT_SIZE * 5] }));
 
@@ -230,6 +274,8 @@ export async function trainModel() {
         // console.log('RENDER')
 
     }
+
+    console.log('Start train model')
     // чтобы в рантайме чекал цены для статистики
     // Шаг 5: Обучение модели
     model.fit(trainInputsTensor, trainLabelsTensor, {
@@ -253,38 +299,6 @@ export async function trainModel() {
 
 }
 
-
-
-const useTest = async (model: tf.Sequential, candles: number[][]) => {
-    const currentInputs = await candelsToInputs(candles)
-    const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]))
-    // console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1][6]) + ' ' + i[i.length - 1][5]))
-
-    // console.log('PrepInps:', prepInputs)
-    const predicts = (await (model.predict(tf.tensor3d(prepInputs)) as tf.Tensor).array() as number[][]).map(p => p[0])
-    // console.log('Predictions:', predicts)
-    console.log('****** RT *****')
-    predicts.forEach((p, i) => {
-        if (i < 2 || !prepInputs[i + 5]) {
-            return
-        }
-
-        const force = Math.round((p - predicts[i - 2]) * 100)
-        // console.log('Force', force , p, predicts[i - 2])
-        const input = currentInputs[i]
-        if (force < 50) {
-            return
-        }
-
-        const nextInputs = currentInputs.slice(i + 1, i + 5)
-        const maxPrice = Math.max(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
-        const currentPrice = input[input.length - 1].realPrice
-        console.log('Force:', force, 'Price', currentPrice, '->', maxPrice, 'change:', ((maxPrice - currentPrice) / currentPrice * 100).toFixed(2))
-
-        // console.log('Next list->', nextInputs.map(inp => new Date(inp[inp.length - 1][6])))
-    })
-
-}
 
 const useRuntime = async (model: tf.Sequential) => {
     const currentInputs = (await candelsToInputs())

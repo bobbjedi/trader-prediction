@@ -197,6 +197,16 @@ export const prepareInputs = async (candles: number[][]) => {
 
       
 
+        // // Изменение [-5%,+5%] =>[0-1]
+        // // Вычисляем изменение в процентах
+        // const change = ((maxPrice - currentPrice) / currentPrice) * 100;
+        // // Нормализуем изменение в диапазоне [0, 1]
+        // const res = (change + (CONFIG.GROWTH_THRESHOLD - 1) * 100) / (2 * (CONFIG.GROWTH_THRESHOLD - 1) * 100);
+        // // Ограничиваем значение в диапазоне [0, 1]
+        // const normalizedRes = Math.max(0, Math.min(1, res));
+        // // console.log(`${currentPrice}->${maxPrice}: Изменение: ${change}%, Нормализованное значение: ${normalizedRes}`);
+
+
 
 
         // const res = maxPrice >= currentPrice * CONFIG.GROWTH_THRESHOLD
