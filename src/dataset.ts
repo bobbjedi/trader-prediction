@@ -2,6 +2,7 @@
 
 import { CONFIG } from "./config";
 import { getHistoricalCandles } from "./binance";
+import { DataSample } from "./t";
 
 export function prepareDataset(candles: number[][], windowSize: number): DataSample[] {
     const dataset: DataSample[] = [];

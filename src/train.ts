@@ -5,23 +5,7 @@ import { candelsToInputs, normalizeArray, prepareDataset, prepareInputs, splitDa
 import { visualizeError, visualizeResults } from './visualizeResults';
 import { setDate } from './statistic';
 import { useTest } from './useTest';
-
-
-tf.setBackend('webgl');
-
-console.log('Available backends:', tf.engine().backendNames());
-
-// Проверяем текущий бэкенд
-console.log('Current backend:', tf.getBackend());
-
-// Проверяем версию WebGL
-console.log('WebGL version:', tf.ENV.get('WEBGL_VERSION'));
-
-// Принудительно устанавливаем CPU бэкенд, если WebGL недоступен
-if (tf.getBackend() !== 'webgl') {
-    console.warn('WebGL недоступен. Переключаемся на CPU.');
-    tf.setBackend('cpu');
-}
+import { useRuntime } from './useRunTime';
 
 
 
@@ -279,7 +263,7 @@ export async function trainModel() {
     // чтобы в рантайме чекал цены для статистики
     // Шаг 5: Обучение модели
     model.fit(trainInputsTensor, trainLabelsTensor, {
-        epochs: 5000,
+        epochs: 300,
         batchSize: 32,
         callbacks: {
             onEpochEnd: (epoch, logs) => {
@@ -293,42 +277,10 @@ export async function trainModel() {
         validationData: [testInputsTensor, testLabelsTensor],
     });
 
-    // setInterval(() => {
-    //     useTest(model, testRanTimeCandels)
-    // }, 10_000)
+    setInterval(() => {
+        useTest(model, testRanTimeCandels)
+        useRuntime(model)
+    }, 60_000)
 
 }
 
-
-const useRuntime = async (model: tf.Sequential) => {
-    const currentInputs = (await candelsToInputs())
-    const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]).flat())
-    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1].closeTime) + ' ' + i[i.length - 1].realPrice.toFixed(2)))
-
-    // console.log('PrepInps:', prepInputs)
-    const [_pred2ClosedValue, _predClosedValue, _lastClosedValue, _noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[][]
-    // const [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue] = await (model.predict(tf.tensor2d(prepInputs)) as tf.Tensor).array() as number[]
-    const pred2ClosedValue = _pred2ClosedValue[0]
-    const predClosedValue = _predClosedValue[0]
-    const lastClosedValue = _lastClosedValue[0]
-    const noClosedValue = _noClosedValue[0]
-
-
-    const closeForce = Math.round((lastClosedValue - pred2ClosedValue) * 100)
-    const noCloseForce = Math.round((noClosedValue - predClosedValue) * 100)
-
-    console.log('LifetimePredictions:', [pred2ClosedValue, predClosedValue, lastClosedValue, noClosedValue])
-    console.log('CloseForce:', closeForce, 'NoCloseForce:', noCloseForce)
-
-    const lastCloseInput = currentInputs[currentInputs.length - 2]
-    const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
-    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle.closeTime), lastCloseCandle.realPrice)
-
-    if (closeForce > 50 || closeForce < -50) {
-        setDate({
-            closeTime: lastCloseCandle.closeTime,
-            closePrice: lastCloseCandle.realPrice,
-            force: closeForce
-        })
-    }
-}
