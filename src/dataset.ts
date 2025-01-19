@@ -197,16 +197,14 @@ export const prepareInputs = async (candles: number[][]) => {
 
       
 
-        // // Изменение [-5%,+5%] =>[0-1]
-        // // Вычисляем изменение в процентах
-        // const change = ((maxPrice - currentPrice) / currentPrice) * 100;
-        // // Нормализуем изменение в диапазоне [0, 1]
-        // const res = (change + (CONFIG.GROWTH_THRESHOLD - 1) * 100) / (2 * (CONFIG.GROWTH_THRESHOLD - 1) * 100);
-        // // Ограничиваем значение в диапазоне [0, 1]
-        // const normalizedRes = Math.max(0, Math.min(1, res));
-        // // console.log(`${currentPrice}->${maxPrice}: Изменение: ${change}%, Нормализованное значение: ${normalizedRes}`);
-
-
+        // Изменение [-5%,+5%] =>[0-1]
+        // Вычисляем изменение в процентах
+        const change = ((maxPrice - currentPrice) / currentPrice) * 100;
+        // Нормализуем изменение в диапазоне [0, 1]
+        const res_ = (change + (CONFIG.GROWTH_THRESHOLD - 1) * 100) / (2 * (CONFIG.GROWTH_THRESHOLD - 1) * 100);
+        // Ограничиваем значение в диапазоне [0, 1]
+        const res = Math.max(0, Math.min(1, res_));
+        // console.log(`${currentPrice}->${maxPrice}: Изменение: ${change}%, Нормализованное значение: ${normalizedRes}`);
 
 
         // const res = maxPrice >= currentPrice * CONFIG.GROWTH_THRESHOLD
@@ -214,20 +212,20 @@ export const prepareInputs = async (candles: number[][]) => {
         //     : 0;
 
 
-            const gotProfit = currentPrice * CONFIG.GROWTH_THRESHOLD
-            const gotProfitHalf = currentPrice * (1 + (CONFIG.GROWTH_THRESHOLD - 1) / 2)
+            // const gotProfit = currentPrice * CONFIG.GROWTH_THRESHOLD
+            // const gotProfitHalf = currentPrice * (1 + (CONFIG.GROWTH_THRESHOLD - 1) / 2)
     
-            let res = 0
+            // let res = 0
     
-            if (maxPrice >= gotProfit) {
-                res = 1
-            } else if (maxPrice>= gotProfitHalf) {
-                res = 0.5
-            } else if(maxPrice > gotProfitHalf && maxPrice > currentPrice) {
-                res = 0.25
-            } else {
-                res = 0
-            }
+            // if (maxPrice >= gotProfit) {
+            //     res = 1
+            // } else if (maxPrice>= gotProfitHalf) {
+            //     res = 0.5
+            // } else if(maxPrice > gotProfitHalf && maxPrice > currentPrice) {
+            //     res = 0.25
+            // } else {
+            //     res = 0
+            // }
     
 
 

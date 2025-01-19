@@ -12,27 +12,41 @@ export const useTest = async (model: tf.Sequential, candles: number[][]) => {
     // console.log('Predictions:', predicts)
     console.log('****** RT *****')
     const countCheck = CONFIG.FORWARD_COUNT_CHEK + 2
+
+
+    let counter = 0
     predicts.forEach((p, i) => {
         if (i < 2 || !prepInputs[i + countCheck]) {
             return
         }
+        const input = currentInputs[i]
 
-        // if (p < 0.6 || p > 0.4) {
+
+        // if (!(p < 0.4 || p > 0.6)) {
         //     return
         // }
-        // const force = Math.round(p * 100)
-        const force = Math.round((p - predicts[i - 2]) * 100)
-        const input = currentInputs[i]
-        if (force < 60) {
+        if (p < 0.7) {
             return
         }
+        const force = Math.round(p * 100)
+
+
+
+        // const force = Math.round((p - predicts[i - 2]) * 100)
+
+        // if (force < 60) {
+        //     return
+        // }
 
         const nextInputs = currentInputs.slice(i + 1, i + countCheck)
         const maxPrice = Math.max(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
         const minPrice = Math.min(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
         const currentPrice = input[input.length - 1].realPrice
         const currentTime = input[input.length - 1].closeTime
-        console.log('Force:', force, new Date(currentTime), 'Price', currentPrice, '->', maxPrice, 'change:', ((maxPrice - currentPrice) / currentPrice * 100).toFixed(2), '->', minPrice, 'change:', ((minPrice - currentPrice) / currentPrice * 100).toFixed(2))
+
+        const targetChange = ((maxPrice - currentPrice) / currentPrice) * 100;
+
+        console.log(`#${counter++}`, +targetChange.toFixed(2), 'Force:', force, new Date(currentTime), 'Price', currentPrice, '->', maxPrice, 'change:', '->', minPrice, 'change:', ((minPrice - currentPrice) / currentPrice * 100).toFixed(2))
     })
 
 }
