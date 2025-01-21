@@ -1,5 +1,15 @@
 // src/visualizeResults.ts
-import Plotly from 'plotly.js-dist'
+let Plotly = {
+  newPlot: (...any: any) => {},
+};
+
+// Проверяем, находимся ли мы в браузере
+if (typeof window !== 'undefined') {
+  // Динамически импортируем Plotly только в браузере
+  import('plotly.js-dist').then((module) => {
+    Plotly = module;
+  });
+}
 
 export const visualizeResults = (realData: number[], predictedData: number[], testMaxClose: number[], id: string) => {
   const trace1 = {
@@ -8,7 +18,6 @@ export const visualizeResults = (realData: number[], predictedData: number[], te
     mode: 'lines',
     name: 'Real Data',
   };
-
 
   const trace2 = {
     x: Array.from({ length: predictedData.length }, (_, i) => i),
@@ -35,6 +44,7 @@ export const visualizeResults = (realData: number[], predictedData: number[], te
 
   Plotly.newPlot(id, data, layout);
 };
+
 
 export const visualizeError = (error: number[], errorTest: number[], id: string) => {
   const trace = {
