@@ -159,7 +159,9 @@ export const candelsToInputs = async (candles?: number[][]) => {
                 low: c[2],
                 close: c[3],
                 volume: c[4],
-                realPrice: c[5],
+                closePrice: c[5],
+                maxPrice: c[1],
+                minPrice: c[2],
                 closeTime: c[6]
             }
         })
@@ -192,9 +194,9 @@ export const prepareInputs = async (candles: number[][]) => {
 
         const inputData = currentInputs[i]
         const nextInputs = currentInputs.slice(i + CONFIG.INPUT_SIZE, i + CONFIG.FORWARD_COUNT_CHEK + CONFIG.INPUT_SIZE)
-        const nextPrices = nextInputs.map(i => i[0].realPrice || 0)
+        const nextPrices = nextInputs.map(i => i[0].closePrice || 0)
         const maxPrice = Math.max(...nextPrices)
-        const currentPrice = inputData[inputData.length - 1].realPrice
+        const currentPrice = inputData[inputData.length - 1].closePrice
 
       
 

@@ -5,7 +5,7 @@ import * as tf from '@tensorflow/tfjs';
 export const useRuntime = async (model: tf.Sequential) => {
     const currentInputs = (await candelsToInputs()).splice(-2)
     const prepInputs = currentInputs.map(i => i.map(v => [v.open, v.high, v.low, v.close, v.volume]))
-    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1].closeTime) + ' ' + i[i.length - 1].realPrice.toFixed(2)))
+    console.log('CurrInps:', currentInputs.map(i => new Date(i[i.length - 1].closeTime) + ' ' + i[i.length - 1].closePrice.toFixed(2)))
 
     // console.log('PrepInps:', prepInputs)
     const res = await (model.predict(tf.tensor3d(prepInputs)) as tf.Tensor).array() as number[][]
@@ -29,12 +29,12 @@ export const useRuntime = async (model: tf.Sequential) => {
 
     const lastCloseInput = currentInputs[currentInputs.length - 2]
     const lastCloseCandle = lastCloseInput[lastCloseInput.length - 1]
-    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle.closeTime), lastCloseCandle.realPrice)
+    console.log('>>>>> CurrentClosePrice:', new Date(lastCloseCandle.closeTime), lastCloseCandle.closePrice)
 
     if (closeForce > 60 || closeForce < -40) {
         setDate({
             closeTime: lastCloseCandle.closeTime,
-            closePrice: lastCloseCandle.realPrice,
+            closePrice: lastCloseCandle.closePrice,
             force: closeForce
         })
     }
