@@ -39,9 +39,9 @@ export const useTest = async (model: tf.Sequential, candles: number[][]) => {
         // }
 
         const nextInputs = currentInputs.slice(i + 1, i + countCheck)
-        const maxPrice = Math.max(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
-        const minPrice = Math.min(...nextInputs.map(i => i[i.length - 1].realPrice || 0))
-        const currentPrice = input[input.length - 1].realPrice
+        const maxPrice = Math.max(...nextInputs.map(i => i[i.length - 1].closePrice || 0))
+        const minPrice = Math.min(...nextInputs.map(i => i[i.length - 1].closePrice || 0))
+        const currentPrice = input[input.length - 1].closePrice
         const currentTime = input[input.length - 1].closeTime
 
         const targetChange = ((maxPrice - currentPrice) / currentPrice) * 100;
